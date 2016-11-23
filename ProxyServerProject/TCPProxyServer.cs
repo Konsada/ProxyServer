@@ -34,7 +34,7 @@ namespace ProxyServerProject
 
                     int remotePort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
 
-                    // call handler
+                    // call handler thread with remotePort
                 }
             }
             catch

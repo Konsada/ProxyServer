@@ -8,5 +8,17 @@ namespace ProxyServerProject
 {
     class Handler
     {
+        int m_remote;
+        Handler(int remote)
+        {
+            m_remote = remote;
+        }
+        /// <summary>
+        /// starts handling the HTTP connection
+        /// </summary>
+        void Start()
+        {
+
+        }
     }
 }
