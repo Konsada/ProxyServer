@@ -54,7 +54,8 @@ namespace ProxyServerProject
             byte[] sbuf = rcvBytes(remoteSocket); 
             byte[] sBody = getBodyScrapsMethod(sbuf);
             string responseHeader = getHTTPHeader(Encoding.ASCII.GetString(sbuf));
-
+            string respBody = Encoding.ASCII.GetString(sBody);
+            int respBodyLen = respBody.Length;
             Console.WriteLine("Received --> \n-----\n" + requestHeader);
             // send response header to client form remote
             SendRequest(m_server, responseHeader);
@@ -63,10 +64,10 @@ namespace ProxyServerProject
             byte[] buf = new byte[m_ReadSize];
             if (sBody.Length > 0)
             {
-                int sbodyRead = 0;
-                while(sbodyRead < sBody.Length)
+                int sbodySent = 0;
+                while(sbodySent < sBody.Length)
                 {
-                    sbodyRead += m_server.Send(sBody, sbodyRead, m_ReadSize, SocketFlags.None); // crashes here, might be sending too many zeros?
+                    sbodySent += m_server.Send(sBody, sbodySent, m_ReadSize, SocketFlags.None); // crashes here, might be sending too many zeros?
                 }
             }
             while ((read = remoteSocket.Receive(buf)) != 0)
@@ -127,6 +128,7 @@ namespace ProxyServerProject
         private static byte[] getBodyScrapsMethod(byte[] buf)
         {
             int bodyStartIndex = -1;
+            int bodyEndIndex = 0;
             for (int i = 0; i < buf.Length && bodyStartIndex < 0; i++)
             {
                 if (buf[i] == '\r')
@@ -135,12 +137,16 @@ namespace ProxyServerProject
                             if (buf[i + 3] == '\n')
                                 bodyStartIndex = i + 4;
             }
-            while (++bodyStartIndex < buf.Length && buf[bodyStartIndex] == 0);
-            byte[] bodySegment = new byte[buf.Length - bodyStartIndex];
+            while (++bodyStartIndex < buf.Length && buf[bodyStartIndex] == 0); // passes leading zeros
+            for (bodyEndIndex = bodyStartIndex; bodyEndIndex < buf.Length; bodyEndIndex++) ; // gets to last byte of data
+
+            byte[] bodySegment = new byte[bodyEndIndex - bodyStartIndex];
 
             // might want to use Buffer.BlockCopy
             
-            Array.Copy(buf, bodyStartIndex, bodySegment, 0, buf.Length - bodyStartIndex);
+            Array.Copy(buf, bodyStartIndex, bodySegment, 0, bodySegment.Length);
+            Encoding.ASCII.GetString(buf);
+            Encoding.ASCII.GetString(bodySegment);
             return bodySegment;
         }
         /// <summary>
@@ -162,5 +168,11 @@ namespace ProxyServerProject
             return uri[1];
         }
 
+        /*TODOs
+         * 1. PUT and HEAD methodology
+         * 2. Concat body segment of first response read to rest of message to browser client
+         * 3. Get CNN.com working
+         * 4. Maybe a Dictionary of RemoteEPs in the TCPProxyServer.cs 
+         */
     }
 }
