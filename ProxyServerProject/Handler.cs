@@ -49,7 +49,7 @@ namespace ProxyServerProject
 
             // State 2: Sending New Request Information to Destination Server and Relay Response to Client
             remoteSocket.Connect(remoteEP);
-            SendRequest(remoteSocket, requestHeader);
+            SendHeader(remoteSocket, requestHeader);
 
             byte[] sbuf = rcvBytes(remoteSocket); 
             byte[] sBody = getBodyScrapsMethod(sbuf);
@@ -58,7 +58,7 @@ namespace ProxyServerProject
             int respBodyLen = respBody.Length;
             Console.WriteLine("Received --> \n-----\n" + requestHeader);
             // send response header to client form remote
-            SendRequest(m_server, responseHeader);
+            SendHeader(m_server, responseHeader);
             // Send body of response to client from remote
             int read = 0;
             byte[] buf = new byte[m_ReadSize];
@@ -154,9 +154,8 @@ namespace ProxyServerProject
         /// </summary>
         /// <param name="socket"></param>
         /// <param name="header"></param>
-        public void SendRequest(Socket socket, string header)
+        public void SendHeader(Socket socket, string header)
         {
-
             Console.WriteLine("Sending --> \n-----\n" + header);
             byte[] sbytes = Encoding.ASCII.GetBytes(header);
             socket.Send(sbytes, sbytes.Length, SocketFlags.None);
