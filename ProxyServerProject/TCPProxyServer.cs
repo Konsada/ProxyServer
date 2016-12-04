@@ -15,7 +15,7 @@ namespace ProxyServerProject
             
             try
             {
-                int port = 4550;
+                port = 4550;
                 Socket alwaysListening = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 IPAddress addr = IPAddress.Loopback;
                 IPEndPoint localEndpoint = new IPEndPoint(addr, port);
@@ -27,11 +27,12 @@ namespace ProxyServerProject
                 while (true)
                 {
                     Console.WriteLine("Waiting for connection...");
-                    using (Socket s = alwaysListening.Accept())
-                    {
+                    Socket s = alwaysListening.Accept();
+                    
                         Handler h = new Handler(s);
                         System.Threading.Thread newRequest = new System.Threading.Thread(h.Handle);
-                    }                    
+                        newRequest.Start();
+                    
                 }
             }
             catch
