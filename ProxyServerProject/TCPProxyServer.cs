@@ -32,10 +32,9 @@ namespace ProxyServerProject
                         Handler h = new Handler(s);
                         System.Threading.Thread newRequest = new System.Threading.Thread(h.Handle);
                         newRequest.Start();
-                    
                 }
             }
-            catch
+            catch(SocketException ex)
             {
 
             }

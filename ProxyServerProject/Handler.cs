@@ -12,7 +12,6 @@ namespace ProxyServerProject
     {
         private Socket m_server;
         private string m_host;
-        private Dictionary<string, string> m_headers;
         private const int m_ReadSize = 2048;
 
         public Handler(Socket serverSocket)
@@ -24,7 +23,10 @@ namespace ProxyServerProject
         /// </summary>
         public void Handle()
         {
+            Dictionary<string, string> m_headers;
             string requestHeader = getHTTPHeader(m_server);
+            if (!requestHeader.Contains("GET") || requestHeader.Contains("Visual Studio") || requestHeader.Contains("192.168.1."))
+                return;
             m_headers = getHeaders(requestHeader);
 
             Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -41,7 +43,7 @@ namespace ProxyServerProject
             int read = 0;
             byte[] buf = new byte[m_ReadSize];
             read = clientSocket.Receive(buf);
-            while(read > 0)
+            while (read > 0)
             {
                 m_server.Send(buf, read, SocketFlags.None);
                 read = clientSocket.Receive(buf);
@@ -60,7 +62,6 @@ namespace ProxyServerProject
             {
                 request += Encoding.ASCII.GetString(rbytes, 0, rbytes.Length);
             }
-
             string[] header = new string[2];
             header = request.Split(new string[] { "\r\n\r\n" }, 2, StringSplitOptions.None);
             return header[0];
