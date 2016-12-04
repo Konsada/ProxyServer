@@ -12,29 +12,29 @@ namespace ProxyServerProject
     {
         TCPProxyServer()
         {
-            TcpListener listener = null;
+            
             try
             {
                 int port = 4550;
-                IPAddress localAddr = IPAddress.(Dns.GetHostEntry("localhost").AddressList[1]);
-
-                listener = new TcpListener(localAddr, port);
-
-                listener.Start();
+                Socket alwaysListening = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                IPAddress addr = IPAddress.Loopback;
+                IPEndPoint localEndpoint = new IPEndPoint(addr, port);
+                alwaysListening.Bind(localEndpoint);
+                alwaysListening.Listen(100);
 
                 byte[] bytes = new byte[1024];
-                string data = null;
-
+                
                 while (true)
                 {
                     Console.WriteLine("Waiting for connection...");
-
-                    TcpClient client = listener.AcceptTcpClient();
-                    Console.WriteLine("Connected...");
-
-                    int remotePort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
-
-                    // call handler thread with remotePort
+                    using (Socket s = alwaysListening.Accept())
+                    {
+                        Socket s = alwaysListening.Accept();
+                        Handler h = new Handler(s);
+                        System.Threading.Thread newRequest = new System.Threading.Thread(new System.Threading.ThreadStart(h.handle()));
+                    }
+                    
+                    // call handler thread with socket connection
                 }
             }
             catch
