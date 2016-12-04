@@ -10,6 +10,7 @@ namespace ProxyServerProject
     {
         static void Main(string[] args)
         {
+            TCPProxyServer proxy = new TCPProxyServer(4550);
         }
     }
 }

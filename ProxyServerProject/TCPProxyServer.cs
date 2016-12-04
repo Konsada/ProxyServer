@@ -10,7 +10,7 @@ namespace ProxyServerProject
 {
     class TCPProxyServer
     {
-        TCPProxyServer()
+        public TCPProxyServer(int port)
         {
             
             try

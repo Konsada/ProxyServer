@@ -1,2 +1,7 @@
 C:\Users\keons_000\Documents\CS455\PROJECTS\ProxyServerProject\ProxyServerProject\bin\Debug\ProxyServerProject.exe.config
 C:\Users\Erik\Documents\GitRepos\ProxyServer\ProxyServerProject\bin\Debug\ProxyServerProject.exe.config
+C:\Users\keons_000\Documents\CS455\PROJECTS\ProxyServerProject\ProxyServerProject\bin\Debug\ProxyServerProject.exe
+C:\Users\keons_000\Documents\CS455\PROJECTS\ProxyServerProject\ProxyServerProject\bin\Debug\ProxyServerProject.pdb
+C:\Users\keons_000\Documents\CS455\PROJECTS\ProxyServerProject\ProxyServerProject\obj\Debug\ProxyServerProject.csprojResolveAssemblyReference.cache
+C:\Users\keons_000\Documents\CS455\PROJECTS\ProxyServerProject\ProxyServerProject\obj\Debug\ProxyServerProject.exe
+C:\Users\keons_000\Documents\CS455\PROJECTS\ProxyServerProject\ProxyServerProject\obj\Debug\ProxyServerProject.pdb
