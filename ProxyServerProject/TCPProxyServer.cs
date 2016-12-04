@@ -12,7 +12,7 @@ namespace ProxyServerProject
     {
         public TCPProxyServer(int port)
         {
-            
+
             try
             {
                 port = 4550;
@@ -23,20 +23,16 @@ namespace ProxyServerProject
                 alwaysListening.Listen(100);
 
                 byte[] bytes = new byte[1024];
-                
+
                 while (true)
                 {
-                    Console.WriteLine("Waiting for connection...");
                     Socket s = alwaysListening.Accept();
-                    
-                        Handler h = new Handler(s);
-                        System.Threading.Thread newRequest = new System.Threading.Thread(h.Handle);
-                        newRequest.Start();
+                    new System.Threading.Thread(new Handler(s).Handle).Start();
                 }
             }
-            catch(SocketException ex)
+            catch (SocketException ex)
             {
-
+                Console.WriteLine(ex.Message);
             }
         }
     }
