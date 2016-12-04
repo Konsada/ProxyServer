@@ -11,8 +11,8 @@ namespace ProxyServerProject
     class Handler
     {
         private Socket m_server;
-        private string m_host;
-        private const int m_ReadSize = 2048;
+        private Dictionary<string, string> m_headers;
+        private const int m_ReadSize = 8192; //(1024*8)
 
         public Handler(Socket serverSocket)
         {
@@ -23,63 +23,107 @@ namespace ProxyServerProject
         /// </summary>
         public void Handle()
         {
-            Dictionary<string, string> m_headers;
-            string requestHeader = getHTTPHeader(m_server);
-            if (!requestHeader.Contains("GET") || requestHeader.Contains("Visual Studio") || requestHeader.Contains("192.168.1."))
-                return;
-            m_headers = getHeaders(requestHeader);
+            // State 0: Handle Reqeust from Client
+            byte[] rbuf = rcvBytes(m_server);
+            byte[] body = getBodyScrapsMethod(rbuf);
 
-            Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            string requestHeader = getHTTPHeader(Encoding.ASCII.GetString(rbuf));
+
+            if (!requestHeader.Contains("GET") || requestHeader.Contains("Visual Studio") || requestHeader.Contains("192.168.1.") || requestHeader.Contains("VisualStudio"))
+                return;
+            
+            m_headers = getHeaders(requestHeader);
+            // State 1: Rebuilding Request Information and Create Connection to Destination Server
+            requestHeader = requestHeader.Replace("http://" + m_headers["Host"], "");
+
+            requestHeader = requestHeader.Replace("Proxy-Connection", "Connection");
+            if (m_headers.ContainsKey("Proxy-Connection") && !m_headers.ContainsKey("Connection"))
+            {
+                m_headers.Add("Connection", m_headers["Proxy-Connection"]);
+                m_headers.Remove("Proxy-Connection");
+            }
+            
+            Socket remoteSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             IPAddress[] addressList = Dns.GetHostAddresses(m_headers["Host"]);
             IPEndPoint remoteEP = new IPEndPoint(addressList[0], 80);
-            clientSocket.Connect(remoteEP);
 
-            SendReqeust(clientSocket, requestHeader);
+            // State 2: Sending New Request Information to Destination Server and Relay Response to Client
+            remoteSocket.Connect(remoteEP);
+            SendRequest(remoteSocket, requestHeader);
 
-            requestHeader = getHTTPHeader(clientSocket);
+            byte[] sbuf = rcvBytes(remoteSocket); 
+            byte[] sBody = getBodyScrapsMethod(sbuf);
+            string responseHeader = getHTTPHeader(Encoding.ASCII.GetString(sbuf));
 
-            SendReqeust(m_server, requestHeader);
-
+            Console.WriteLine("Received --> \n-----\n" + requestHeader);
+            // send response header to client form remote
+            SendRequest(m_server, responseHeader);
+            // Send body of response to client from remote
             int read = 0;
             byte[] buf = new byte[m_ReadSize];
-            read = clientSocket.Receive(buf);
-            while (read > 0)
+            if (sBody.Length > 0)
+            {
+                int sbodyRead = 0;
+                while(sbodyRead < sBody.Length)
+                {
+                    sbodyRead += m_server.Send(sBody, sbodyRead, m_ReadSize, SocketFlags.None); // crashes here, might be sending too many zeros?
+                }
+            }
+            while ((read = remoteSocket.Receive(buf)) != 0)
             {
                 m_server.Send(buf, read, SocketFlags.None);
-                read = clientSocket.Receive(buf);
             }
 
             m_server.Shutdown(SocketShutdown.Both);
             m_server.Close();
         }
-        private static string getHTTPHeader(Socket socket)
+        /// <summary>
+        /// Receives bytes from socket
+        /// </summary>
+        /// <param name="socket"></param>
+        /// <returns></returns>
+        private static byte[] rcvBytes(Socket socket)
         {
-            string request = "";
             byte[] rbytes = new byte[m_ReadSize];
             int bytesRcvd = 0;
-
-            while ((bytesRcvd = socket.Receive(rbytes)) > 0 && !request.Contains("\r\n\r\n"))
+            int offset = 0;
+            while ((bytesRcvd = socket.Receive(rbytes, offset, m_ReadSize, SocketFlags.None)) > 0)
             {
-                request += Encoding.ASCII.GetString(rbytes, 0, rbytes.Length);
+                offset += bytesRcvd;
+                string temp = Encoding.ASCII.GetString(rbytes);
+                Array.Resize(ref rbytes, rbytes.Length * 2);
             }
-            string[] header = new string[2];
-            header = request.Split(new string[] { "\r\n\r\n" }, 2, StringSplitOptions.None);
-            return header[0];
+            return rbytes;
         }
+        private static string getHTTPHeader(string s)
+        {
+            string[] header = new string[2];
+            header = s.Split(new string[] { "\r\n\r\n" }, 2, StringSplitOptions.None);
+            return header[0] + "\r\n\r\n";
+        }
+        /// <summary>
+        /// Parses HTTP header into dictionary of headers
+        /// </summary>
+        /// <param name="HTTPHeader"></param>
+        /// <returns></returns>
         private static Dictionary<string, string> getHeaders(string HTTPHeader) // must be sent header
         {
             Dictionary<string, string> headers = new Dictionary<string, string>();
             string[] lines = new string[256];
-            lines = HTTPHeader.Split(new string[] { "\r\n" }, 256, StringSplitOptions.None);
+            lines = HTTPHeader.Split(new string[] { "\r\n" }, 256, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 1; i < lines.Length; i++)
             {
                 string[] line = new string[2];
-                line = lines[i].Split(new string[] { ": " }, 2, StringSplitOptions.None);
-                headers.Add(line[0], line[1]);
+                line = lines[i].Split(new string[] { ": " }, 2, StringSplitOptions.RemoveEmptyEntries);
+                headers.Add(line[0], line[1].Trim());
             }
-
             return headers;
         }
+        /// <summary>
+        /// Utility function used to read body if initial rcv read past header
+        /// </summary>
+        /// <param name="buf"></param>
+        /// <returns></returns>
         private static byte[] getBodyScrapsMethod(byte[] buf)
         {
             int bodyStartIndex = -1;
@@ -91,18 +135,32 @@ namespace ProxyServerProject
                             if (buf[i + 3] == '\n')
                                 bodyStartIndex = i + 4;
             }
-            while (++bodyStartIndex < buf.Length && buf[bodyStartIndex] == 0) ;
-
+            while (++bodyStartIndex < buf.Length && buf[bodyStartIndex] == 0);
             byte[] bodySegment = new byte[buf.Length - bodyStartIndex];
 
             // might want to use Buffer.BlockCopy
+            
             Array.Copy(buf, bodyStartIndex, bodySegment, 0, buf.Length - bodyStartIndex);
             return bodySegment;
         }
-        public void SendReqeust(Socket socket, string header)
+        /// <summary>
+        /// Sends out bytes to client socket
+        /// </summary>
+        /// <param name="socket"></param>
+        /// <param name="header"></param>
+        public void SendRequest(Socket socket, string header)
         {
+
+            Console.WriteLine("Sending --> \n-----\n" + header);
             byte[] sbytes = Encoding.ASCII.GetBytes(header);
             socket.Send(sbytes, sbytes.Length, SocketFlags.None);
         }
+        private static string getRequestURI(string requestLine)
+        {
+            string[] uri = new string[3];
+            uri = requestLine.Split(new string[] { " " }, 3, StringSplitOptions.None);
+            return uri[1];
+        }
+
     }
 }
