@@ -92,10 +92,41 @@ namespace ProxyServerProject
                 Buffer.BlockCopy(sBody, sent, buf, 0, send);
                 sent += m_server.Send(buf, 0, send, SocketFlags.None);
             }
-            remoteSocket.Shutdown(SocketShutdown.Both);
-            m_server.Shutdown(SocketShutdown.Both);
-            remoteSocket.Close();
-            m_server.Close();
+
+            //Now we clean up our socket connections
+            try
+            {
+                remoteSocket.Shutdown(SocketShutdown.Both);
+                remoteSocket.Close();
+            }
+            catch (SocketException se)
+            {
+                if (se.NativeErrorCode == 10054)
+                {
+                    //We just ignore this, we don't care about errors with it already being closed.
+                }
+                else
+                {
+                    throw se;
+                }
+            }
+
+            try
+            {
+                m_server.Shutdown(SocketShutdown.Both);
+                m_server.Close();
+            }
+            catch (SocketException se)
+            {
+                if (se.NativeErrorCode == 10054)
+                {
+                    //We just ignore this, we don't care about errors with it already being closed.
+                }
+                else
+                {
+                    throw se;
+                }
+            }
         }
 
         private Socket makeRemoteSocket(string host)
