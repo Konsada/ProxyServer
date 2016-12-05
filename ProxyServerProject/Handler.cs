@@ -29,9 +29,14 @@ namespace ProxyServerProject
 
             string requestHeader = getHTTPHeader(Encoding.ASCII.GetString(rbuf));
 
-            if (!requestHeader.Contains("GET") || requestHeader.Contains("Visual Studio") || requestHeader.Contains("192.168.1.") || requestHeader.Contains("VisualStudio"))
+            if (!string.IsNullOrEmpty(requestHeader))
+            {
+                Console.WriteLine(requestHeader);
+            }
+            if (!requestHeader.Contains("GET") || requestHeader.Contains("Visual Studio") || requestHeader.Contains("VisualStudio") || requestHeader.Contains("Microsoft"))
                 return;
-            
+            Console.WriteLine(requestHeader);
+
             m_headers = getHeaders(requestHeader);
             // State 1: Rebuilding Request Information and Create Connection to Destination Server
             requestHeader = requestHeader.Replace("http://" + m_headers["Host"], "");
@@ -88,10 +93,13 @@ namespace ProxyServerProject
             byte[] rbytes = new byte[m_ReadSize];
             int bytesRcvd = 0;
             int offset = 0;
+            //bool headerRead = false;
             while ((bytesRcvd = socket.Receive(rbytes, offset, m_ReadSize, SocketFlags.None)) > 0)
             {
                 offset += bytesRcvd;
                 string temp = Encoding.ASCII.GetString(rbytes);
+                if (temp.Contains("\r\n\r\n"))
+                    break;
                 Array.Resize(ref rbytes, rbytes.Length * 2);
             }
             return rbytes;

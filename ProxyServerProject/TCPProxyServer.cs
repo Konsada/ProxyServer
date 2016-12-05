@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace ProxyServerProject
 {
@@ -21,13 +23,17 @@ namespace ProxyServerProject
                 IPEndPoint localEndpoint = new IPEndPoint(addr, port);
                 alwaysListening.Bind(localEndpoint);
                 alwaysListening.Listen(100);
+                ConcurrentQueue<Thread> clients = new ConcurrentQueue<Thread>();
 
                 byte[] bytes = new byte[1024];
 
                 while (true)
                 {
                     Socket s = alwaysListening.Accept();
-                    new System.Threading.Thread(new Handler(s).Handle).Start();
+
+                    Thread c = new Thread(new Handler(s).Handle);
+                    c.Start();
+                    //clients.Enqueue(c);
                 }
             }
             catch (SocketException ex)
